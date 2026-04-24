@@ -2,42 +2,94 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>電卓</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>テトリス</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="calculator">
-    <div class="display">
-      <div id="expression"></div>
-      <div id="result">0</div>
+  <div class="game-wrapper">
+    <header class="game-header">
+      <h1>TETRIS</h1>
+    </header>
+
+    <div class="game-layout">
+      <!-- Left panel -->
+      <div class="side-panel left-panel">
+        <div class="panel-box">
+          <div class="panel-label">HOLD</div>
+          <canvas id="holdCanvas" width="120" height="120"></canvas>
+        </div>
+        <div class="panel-box">
+          <div class="panel-label">SCORE</div>
+          <div class="panel-value" id="score">0</div>
+        </div>
+        <div class="panel-box">
+          <div class="panel-label">LEVEL</div>
+          <div class="panel-value" id="level">1</div>
+        </div>
+        <div class="panel-box">
+          <div class="panel-label">LINES</div>
+          <div class="panel-value" id="lines">0</div>
+        </div>
+      </div>
+
+      <!-- Main board -->
+      <div class="board-container">
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+        <div class="overlay" id="overlay">
+          <div class="overlay-content" id="startScreen">
+            <h2>TETRIS</h2>
+            <p>キーボード操作:</p>
+            <ul>
+              <li>← → : 移動</li>
+              <li>↑ / X : 右回転</li>
+              <li>Z : 左回転</li>
+              <li>↓ : ソフトドロップ</li>
+              <li>Space : ハードドロップ</li>
+              <li>C : ホールド</li>
+              <li>P : 一時停止</li>
+            </ul>
+            <button class="btn-start" id="startBtn">スタート</button>
+          </div>
+          <div class="overlay-content hidden" id="pauseScreen">
+            <h2>PAUSE</h2>
+            <button class="btn-start" id="resumeBtn">再開</button>
+          </div>
+          <div class="overlay-content hidden" id="gameOverScreen">
+            <h2>GAME OVER</h2>
+            <div class="final-score">Score: <span id="finalScore">0</span></div>
+            <button class="btn-start" id="restartBtn">もう一度</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <div class="side-panel right-panel">
+        <div class="panel-box">
+          <div class="panel-label">NEXT</div>
+          <canvas id="nextCanvas" width="120" height="360"></canvas>
+        </div>
+      </div>
     </div>
-    <div class="buttons">
-      <button class="btn btn-clear" onclick="clearAll()">AC</button>
-      <button class="btn btn-op" onclick="toggleSign()">+/-</button>
-      <button class="btn btn-op" onclick="percent()">%</button>
-      <button class="btn btn-operator" onclick="inputOperator('/')">÷</button>
 
-      <button class="btn" onclick="inputDigit('7')">7</button>
-      <button class="btn" onclick="inputDigit('8')">8</button>
-      <button class="btn" onclick="inputDigit('9')">9</button>
-      <button class="btn btn-operator" onclick="inputOperator('*')">×</button>
-
-      <button class="btn" onclick="inputDigit('4')">4</button>
-      <button class="btn" onclick="inputDigit('5')">5</button>
-      <button class="btn" onclick="inputDigit('6')">6</button>
-      <button class="btn btn-operator" onclick="inputOperator('-')">−</button>
-
-      <button class="btn" onclick="inputDigit('1')">1</button>
-      <button class="btn" onclick="inputDigit('2')">2</button>
-      <button class="btn" onclick="inputDigit('3')">3</button>
-      <button class="btn btn-operator" onclick="inputOperator('+')">+</button>
-
-      <button class="btn btn-zero" onclick="inputDigit('0')">0</button>
-      <button class="btn" onclick="inputDecimal()">.</button>
-      <button class="btn btn-equals" onclick="calculate()">=</button>
+    <!-- Mobile controls -->
+    <div class="mobile-controls">
+      <div class="mobile-row">
+        <button class="mobile-btn" id="holdBtn">HOLD</button>
+        <button class="mobile-btn" id="rotateLeftBtn">↺</button>
+        <button class="mobile-btn" id="rotateRightBtn">↻</button>
+      </div>
+      <div class="mobile-row">
+        <button class="mobile-btn" id="moveLeftBtn">◀</button>
+        <button class="mobile-btn" id="softDropBtn">▼</button>
+        <button class="mobile-btn" id="moveRightBtn">▶</button>
+      </div>
+      <div class="mobile-row">
+        <button class="mobile-btn wide" id="hardDropBtn">HARD DROP</button>
+      </div>
     </div>
   </div>
-  <script src="calculator.js"></script>
+
+  <script src="tetris.js"></script>
 </body>
 </html>
