@@ -7,7 +7,7 @@ let expression = '';
 const resultEl = document.getElementById('result');
 const expressionEl = document.getElementById('expression');
 
-function updateDisplay() {
+function updateDisplay(animate = false) {
   let display = currentInput;
   if (display.length > 12) {
     const num = parseFloat(display);
@@ -15,6 +15,11 @@ function updateDisplay() {
   }
   resultEl.textContent = display;
   expressionEl.textContent = expression;
+  if (animate) {
+    resultEl.classList.remove('result-pop');
+    void resultEl.offsetWidth;
+    resultEl.classList.add('result-pop');
+  }
 }
 
 function inputDigit(digit) {
@@ -103,7 +108,7 @@ function calculate() {
   previousInput = '';
   shouldResetInput = true;
 
-  updateDisplay();
+  updateDisplay(true);
 }
 
 function clearAll() {
