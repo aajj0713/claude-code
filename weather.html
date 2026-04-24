@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>東京 天気</title>
+  <link rel="stylesheet" href="weather.css">
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="location">
+        <span class="pin">📍</span>
+        <h1>東京</h1>
+      </div>
+      <div class="date" id="current-date"></div>
+    </div>
+
+    <div class="current-weather card" id="current-section">
+      <div class="loading">読み込み中...</div>
+    </div>
+
+    <div class="details-grid" id="details-section"></div>
+
+    <div class="forecast-section">
+      <h2>7日間の予報</h2>
+      <div class="forecast-list" id="forecast-section"></div>
+    </div>
+
+    <div class="error-msg hidden" id="error-msg">
+      <span>⚠️</span> データの取得に失敗しました。しばらく後にお試しください。
+    </div>
+
+    <button class="refresh-btn" onclick="loadWeather()" title="更新">↻ 更新</button>
+  </div>
+
+  <script src="weather.js"></script>
+</body>
+</html>
