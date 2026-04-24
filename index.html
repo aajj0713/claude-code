@@ -3,41 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>電卓</title>
+  <title>お酒 × 料理 ペアリング</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="calculator">
-    <div class="display">
-      <div id="expression"></div>
-      <div id="result">0</div>
-    </div>
-    <div class="buttons">
-      <button class="btn btn-clear" onclick="clearAll()">AC</button>
-      <button class="btn btn-op" onclick="toggleSign()">+/-</button>
-      <button class="btn btn-op" onclick="percent()">%</button>
-      <button class="btn btn-operator" onclick="inputOperator('/')">÷</button>
+  <div class="app">
+    <header class="header">
+      <h1 class="title">🍷 お酒 × 料理</h1>
+      <p class="subtitle">お酒を選ぶと、合う料理をご提案します</p>
+    </header>
 
-      <button class="btn" onclick="inputDigit('7')">7</button>
-      <button class="btn" onclick="inputDigit('8')">8</button>
-      <button class="btn" onclick="inputDigit('9')">9</button>
-      <button class="btn btn-operator" onclick="inputOperator('*')">×</button>
+    <section class="drink-section">
+      <div class="drink-grid">
+        <button class="drink-card" data-drink="beer" onclick="selectDrink('beer')">
+          <span class="drink-icon">🍺</span>
+          <span class="drink-name">ビール</span>
+        </button>
+        <button class="drink-card" data-drink="whiskey" onclick="selectDrink('whiskey')">
+          <span class="drink-icon">🥃</span>
+          <span class="drink-name">ウイスキー</span>
+        </button>
+        <button class="drink-card" data-drink="shochu" onclick="selectDrink('shochu')">
+          <span class="drink-icon">🍶</span>
+          <span class="drink-name">焼酎</span>
+        </button>
+        <button class="drink-card" data-drink="red-wine" onclick="selectDrink('red-wine')">
+          <span class="drink-icon">🍷</span>
+          <span class="drink-name">赤ワイン</span>
+        </button>
+        <button class="drink-card" data-drink="white-wine" onclick="selectDrink('white-wine')">
+          <span class="drink-icon">🥂</span>
+          <span class="drink-name">白ワイン</span>
+        </button>
+        <button class="drink-card" data-drink="sake" onclick="selectDrink('sake')">
+          <span class="drink-icon">🍾</span>
+          <span class="drink-name">日本酒</span>
+        </button>
+      </div>
+    </section>
 
-      <button class="btn" onclick="inputDigit('4')">4</button>
-      <button class="btn" onclick="inputDigit('5')">5</button>
-      <button class="btn" onclick="inputDigit('6')">6</button>
-      <button class="btn btn-operator" onclick="inputOperator('-')">−</button>
-
-      <button class="btn" onclick="inputDigit('1')">1</button>
-      <button class="btn" onclick="inputDigit('2')">2</button>
-      <button class="btn" onclick="inputDigit('3')">3</button>
-      <button class="btn btn-operator" onclick="inputOperator('+')">+</button>
-
-      <button class="btn btn-zero" onclick="inputDigit('0')">0</button>
-      <button class="btn" onclick="inputDecimal()">.</button>
-      <button class="btn btn-equals" onclick="calculate()">=</button>
-    </div>
+    <section class="result-section" id="result-section">
+      <div class="result-card" id="result-card">
+        <div class="result-header">
+          <span class="result-drink-icon" id="result-icon"></span>
+          <div>
+            <p class="result-label">選択中のお酒</p>
+            <h2 class="result-drink-name" id="result-drink-name"></h2>
+          </div>
+        </div>
+        <p class="result-description" id="result-description"></p>
+        <h3 class="food-title">おすすめの料理</h3>
+        <div class="food-grid" id="food-grid"></div>
+      </div>
+    </section>
   </div>
-  <script src="calculator.js"></script>
+
+  <script src="pairing.js"></script>
 </body>
 </html>
