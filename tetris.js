@@ -1,102 +1,94 @@
 'use strict';
 
-// ── Constants ──────────────────────────────────────────────────────────────────
-const COLS = 10;
-const ROWS = 20;
-const CELL = 30;
-const COLORS = [
-  null,
-  '#00d4ff', // I - cyan
-  '#ffd700', // O - yellow
-  '#bf00ff', // T - purple
-  '#00e676', // S - green
-  '#ff1744', // Z - red
-  '#ff6d00', // J - orange
-  '#2979ff', // L - blue
-];
-
-const PIECES = [
-  null,
-  // I
-  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
-  // O
-  [[2,2],[2,2]],
-  // T
-  [[0,3,0],[3,3,3],[0,0,0]],
-  // S
-  [[0,4,4],[4,4,0],[0,0,0]],
-  // Z
-  [[5,5,0],[0,5,5],[0,0,0]],
-  // J
-  [[6,0,0],[6,6,6],[0,0,0]],
-  // L
-  [[0,0,7],[7,7,7],[0,0,0]],
-];
-
-const SCORES = [0, 100, 300, 500, 800];
-const DROP_INTERVAL = [800, 700, 600, 500, 400, 320, 240, 180, 130, 90, 60];
-
-// ── Canvas setup ───────────────────────────────────────────────────────────────
+// ── Canvas ─────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const nextCanvas = document.getElementById('nextCanvas');
-const nextCtx = nextCanvas.getContext('2d');
-const holdCanvas = document.getElementById('holdCanvas');
-const holdCtx = holdCanvas.getContext('2d');
+const ctx    = canvas.getContext('2d');
+const nxtCvs = document.getElementById('nextCanvas');
+const nxtCtx = nxtCvs.getContext('2d');
+const hldCvs = document.getElementById('holdCanvas');
+const hldCtx = hldCvs.getContext('2d');
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+const COLS = 10, ROWS = 20, SZ = 30;
+
+const PALETTE = [
+  null,
+  '#00d4ff', // 1 I
+  '#ffd700', // 2 O
+  '#bf00ff', // 3 T
+  '#00e676', // 4 S
+  '#ff1744', // 5 Z
+  '#ff6d00', // 6 J
+  '#2979ff', // 7 L
+];
+
+const MINOS = [
+  null,
+  [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
+  [[2,2],[2,2]],                               // O
+  [[0,3,0],[3,3,3],[0,0,0]],                   // T
+  [[0,4,4],[4,4,0],[0,0,0]],                   // S
+  [[5,5,0],[0,5,5],[0,0,0]],                   // Z
+  [[6,0,0],[6,6,6],[0,0,0]],                   // J
+  [[0,0,7],[7,7,7],[0,0,0]],                   // L
+];
+
+const SCORE_TABLE = [0, 100, 300, 500, 800];
+const SPEEDS      = [800, 700, 600, 500, 400, 320, 240, 180, 130, 90, 60];
 
 // ── Game state ─────────────────────────────────────────────────────────────────
-let board, piece, nextQueue, holdPiece, holdUsed;
+let board, bag, queue, heldType, holdLocked;
+let cur;      // { type, mat, x, y }
 let score, level, lines;
-let gameRunning, paused, gameOver;
-let dropTimer, lastTime;
-let animationId;
+let running, paused;
+let dropAcc, lastTs, rafId;
 
-// ── Bag randomizer ──────────────────────────────────────────────────────────────
-let bag = [];
+// ── 7-bag randomizer ───────────────────────────────────────────────────────────
 function refillBag() {
   bag = [1, 2, 3, 4, 5, 6, 7];
-  for (let i = bag.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+  for (let i = 6; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
     [bag[i], bag[j]] = [bag[j], bag[i]];
   }
 }
-function nextFromBag() {
-  if (bag.length === 0) refillBag();
+
+function nextType() {
+  if (!bag.length) refillBag();
   return bag.pop();
 }
 
-// ── Board utilities ─────────────────────────────────────────────────────────────
-function createBoard() {
+// ── Board helpers ──────────────────────────────────────────────────────────────
+function emptyBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
 }
 
-function isValid(matrix, ox, oy) {
-  for (let r = 0; r < matrix.length; r++) {
-    for (let c = 0; c < matrix[r].length; c++) {
-      if (!matrix[r][c]) continue;
-      const nx = ox + c, ny = oy + r;
-      if (nx < 0 || nx >= COLS || ny >= ROWS) return false;
-      if (ny >= 0 && board[ny][nx]) return false;
+function fits(mat, cx, cy) {
+  for (let r = 0; r < mat.length; r++) {
+    for (let c = 0; c < mat[r].length; c++) {
+      if (!mat[r][c]) continue;
+      const x = cx + c, y = cy + r;
+      if (x < 0 || x >= COLS || y >= ROWS) return false;
+      if (y >= 0 && board[y][x]) return false;
     }
   }
   return true;
 }
 
-function lockPiece() {
-  const { matrix, x, y } = piece;
-  for (let r = 0; r < matrix.length; r++) {
-    for (let c = 0; c < matrix[r].length; c++) {
-      if (!matrix[r][c]) continue;
-      const ny = y + r, nx = x + c;
-      if (ny < 0) { triggerGameOver(); return; }
-      board[ny][nx] = matrix[r][c];
+// Place piece onto board; returns true if any cell was above row 0
+function stamp() {
+  let overflow = false;
+  for (let r = 0; r < cur.mat.length; r++) {
+    for (let c = 0; c < cur.mat[r].length; c++) {
+      if (!cur.mat[r][c]) continue;
+      const y = cur.y + r, x = cur.x + c;
+      if (y < 0) { overflow = true; continue; }
+      board[y][x] = cur.mat[r][c];
     }
   }
-  clearLines();
-  spawnPiece();
+  return overflow;
 }
 
-function clearLines() {
+function clearFull() {
   let cleared = 0;
   for (let r = ROWS - 1; r >= 0; r--) {
     if (board[r].every(v => v !== 0)) {
@@ -106,247 +98,245 @@ function clearLines() {
       r++;
     }
   }
-  if (cleared > 0) {
-    lines += cleared;
-    score += SCORES[cleared] * level;
-    level = Math.min(10, Math.floor(lines / 10) + 1);
-    updateUI();
-  }
+  return cleared;
 }
 
-// ── Piece management ────────────────────────────────────────────────────────────
-function spawnPiece() {
-  const type = nextQueue.shift();
-  nextQueue.push(nextFromBag());
-  piece = {
-    type,
-    matrix: PIECES[type].map(row => [...row]),
-    x: Math.floor(COLS / 2) - Math.floor(PIECES[type][0].length / 2),
-    y: -1,
-  };
-  holdUsed = false;
-  if (!isValid(piece.matrix, piece.x, piece.y)) {
-    triggerGameOver();
-  }
-}
-
-function rotateCW(matrix) {
-  const n = matrix.length, m = matrix[0].length;
-  const out = Array.from({ length: m }, () => new Array(n).fill(0));
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < m; c++)
-      out[c][n - 1 - r] = matrix[r][c];
+// ── Rotation ───────────────────────────────────────────────────────────────────
+function rotateCW(mat) {
+  const R = mat.length, C = mat[0].length;
+  const out = Array.from({ length: C }, () => new Array(R).fill(0));
+  for (let r = 0; r < R; r++)
+    for (let c = 0; c < C; c++)
+      out[c][R - 1 - r] = mat[r][c];
   return out;
 }
 
-function rotateCCW(matrix) {
-  return rotateCW(rotateCW(rotateCW(matrix)));
+function rotateCCW(mat) {
+  return rotateCW(rotateCW(rotateCW(mat)));
 }
 
-// Wall-kick offsets (SRS simplified)
-const KICKS = [[0,0],[-1,0],[1,0],[0,-1],[-1,-1],[1,-1]];
+const KICKS = [[0,0],[1,0],[-1,0],[0,-1],[1,-1],[-1,-1],[0,1]];
 
-function tryRotate(rotFn) {
-  const rotated = rotFn(piece.matrix);
+function tryRotate(fn) {
+  if (!cur) return;
+  const next = fn(cur.mat);
   for (const [dx, dy] of KICKS) {
-    if (isValid(rotated, piece.x + dx, piece.y + dy)) {
-      piece.matrix = rotated;
-      piece.x += dx;
-      piece.y += dy;
+    if (fits(next, cur.x + dx, cur.y + dy)) {
+      cur.mat = next;
+      cur.x += dx;
+      cur.y += dy;
       return;
     }
   }
 }
 
-function ghostY() {
-  let gy = piece.y;
-  while (isValid(piece.matrix, piece.x, gy + 1)) gy++;
+// ── Spawn ──────────────────────────────────────────────────────────────────────
+function spawnPiece() {
+  const type = queue.shift();
+  queue.push(nextType());
+  const mat = MINOS[type].map(r => [...r]);
+  const x = (COLS >> 1) - (mat[0].length >> 1);
+  cur = { type, mat, x, y: -1 };
+  holdLocked = false;
+  if (!fits(mat, x, -1)) {
+    endGame();
+  }
+}
+
+// ── Lock ───────────────────────────────────────────────────────────────────────
+function lock() {
+  const overflow = stamp(); // place cells; skip those above row 0
+  if (overflow) {
+    endGame();
+    return;
+  }
+  const n = clearFull();
+  if (n > 0) {
+    lines += n;
+    score += SCORE_TABLE[n] * level;
+    level = Math.min(10, Math.floor(lines / 10) + 1);
+    updateHUD();
+  }
+  spawnPiece();
+}
+
+// ── Ghost ──────────────────────────────────────────────────────────────────────
+function ghostRow() {
+  let gy = cur.y;
+  while (fits(cur.mat, cur.x, gy + 1)) gy++;
   return gy;
 }
 
-// ── Controls ────────────────────────────────────────────────────────────────────
-function moveLeft()  { if (isValid(piece.matrix, piece.x - 1, piece.y)) piece.x--; }
-function moveRight() { if (isValid(piece.matrix, piece.x + 1, piece.y)) piece.x++; }
+// ── Player actions ─────────────────────────────────────────────────────────────
+function moveLeft()  { if (cur && fits(cur.mat, cur.x - 1, cur.y)) cur.x--; }
+function moveRight() { if (cur && fits(cur.mat, cur.x + 1, cur.y)) cur.x++; }
 
 function softDrop() {
-  if (isValid(piece.matrix, piece.x, piece.y + 1)) {
-    piece.y++;
+  if (!cur) return;
+  if (fits(cur.mat, cur.x, cur.y + 1)) {
+    cur.y++;
     score++;
-    updateUI();
-    dropTimer = 0;
+    updateHUD();
+    dropAcc = 0;
   } else {
-    lockPiece();
+    lock();
   }
 }
 
 function hardDrop() {
-  const gy = ghostY();
-  score += (gy - piece.y) * 2;
-  piece.y = gy;
-  updateUI();
-  lockPiece();
+  if (!cur) return;
+  const gy = ghostRow();
+  score += (gy - cur.y) * 2;
+  cur.y = gy;
+  updateHUD();
+  lock();
 }
 
-function hold() {
-  if (holdUsed) return;
-  holdUsed = true;
-  if (holdPiece === null) {
-    holdPiece = piece.type;
-    spawnPiece();
+function doHold() {
+  if (!cur || holdLocked) return;
+  if (heldType === null) {
+    const saved = cur.type;
+    spawnPiece();          // spawn next; sets holdLocked=false
+    heldType = saved;
   } else {
-    const tmp = holdPiece;
-    holdPiece = piece.type;
-    piece = {
-      type: tmp,
-      matrix: PIECES[tmp].map(row => [...row]),
-      x: Math.floor(COLS / 2) - Math.floor(PIECES[tmp][0].length / 2),
-      y: -1,
-    };
+    const swap = heldType;
+    heldType = cur.type;
+    const mat = MINOS[swap].map(r => [...r]);
+    const x = (COLS >> 1) - (mat[0].length >> 1);
+    cur = { type: swap, mat, x, y: -1 };
   }
-  drawHold();
+  holdLocked = true;       // prevent hold again until next piece
+  renderHold();
 }
 
-// ── Drawing ─────────────────────────────────────────────────────────────────────
-function drawCell(context, x, y, colorIndex, alpha = 1) {
-  if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha;
-  context.fillStyle = color;
-  context.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
-
-  // Highlight
-  context.fillStyle = 'rgba(255,255,255,0.25)';
-  context.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, 4);
-  context.fillRect(x * CELL + 1, y * CELL + 1, 4, CELL - 2);
-
-  // Shadow
-  context.fillStyle = 'rgba(0,0,0,0.35)';
-  context.fillRect(x * CELL + 1, y * CELL + CELL - 5, CELL - 2, 4);
-  context.fillRect(x * CELL + CELL - 5, y * CELL + 1, 4, CELL - 2);
-
-  context.globalAlpha = 1;
+// ── Drawing ────────────────────────────────────────────────────────────────────
+function drawCell(c, col, row, colorIdx, alpha) {
+  if (!colorIdx) return;
+  c.globalAlpha = alpha ?? 1;
+  const px = col * SZ, py = row * SZ;
+  c.fillStyle = PALETTE[colorIdx];
+  c.fillRect(px + 1, py + 1, SZ - 2, SZ - 2);
+  c.fillStyle = 'rgba(255,255,255,0.28)';
+  c.fillRect(px + 1, py + 1, SZ - 2, 4);
+  c.fillRect(px + 1, py + 1, 4, SZ - 2);
+  c.fillStyle = 'rgba(0,0,0,0.38)';
+  c.fillRect(px + 1, py + SZ - 5, SZ - 2, 4);
+  c.fillRect(px + SZ - 5, py + 1, 4, SZ - 2);
+  c.globalAlpha = 1;
 }
 
-function drawGrid() {
+function renderBoard() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Grid lines
   ctx.strokeStyle = 'rgba(255,255,255,0.04)';
   ctx.lineWidth = 1;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      ctx.strokeRect(c * CELL, r * CELL, CELL, CELL);
-    }
-  }
-}
-
-function drawBoard() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGrid();
-
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      ctx.strokeRect(c * SZ, r * SZ, SZ, SZ);
+  // Locked cells
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
       drawCell(ctx, c, r, board[r][c]);
+  if (!cur) return;
+  // Ghost
+  const gy = ghostRow();
+  for (let r = 0; r < cur.mat.length; r++)
+    for (let c = 0; c < cur.mat[r].length; c++)
+      if (cur.mat[r][c] && gy + r >= 0)
+        drawCell(ctx, cur.x + c, gy + r, cur.mat[r][c], 0.18);
+  // Active piece
+  for (let r = 0; r < cur.mat.length; r++)
+    for (let c = 0; c < cur.mat[r].length; c++)
+      if (cur.mat[r][c] && cur.y + r >= 0)
+        drawCell(ctx, cur.x + c, cur.y + r, cur.mat[r][c]);
 }
 
-function drawGhost() {
-  const gy = ghostY();
-  for (let r = 0; r < piece.matrix.length; r++)
-    for (let c = 0; c < piece.matrix[r].length; c++)
-      if (piece.matrix[r][c])
-        drawCell(ctx, piece.x + c, gy + r, piece.matrix[r][c], 0.2);
-}
-
-function drawActivePiece() {
-  for (let r = 0; r < piece.matrix.length; r++)
-    for (let c = 0; c < piece.matrix[r].length; c++)
-      if (piece.matrix[r][c] && piece.y + r >= 0)
-        drawCell(ctx, piece.x + c, piece.y + r, piece.matrix[r][c]);
-}
-
-function drawMiniPiece(context, type, canvasW, canvasH) {
-  context.clearRect(0, 0, canvasW, canvasH);
+function drawMini(c, w, h, type) {
+  c.clearRect(0, 0, w, h);
   if (!type) return;
-  const matrix = PIECES[type];
-  const mw = matrix[0].length, mh = matrix.length;
-  const cellSize = Math.min(Math.floor((canvasW - 16) / mw), Math.floor((canvasH - 16) / mh));
-  const ox = Math.floor((canvasW - mw * cellSize) / 2);
-  const oy = Math.floor((canvasH - mh * cellSize) / 2);
-
-  context.fillStyle = COLORS[type];
+  const mat = MINOS[type];
+  const mw = mat[0].length, mh = mat.length;
+  const cs = Math.min(((w - 16) / mw) | 0, ((h - 16) / mh) | 0);
+  const ox = ((w - mw * cs) / 2) | 0;
+  const oy = ((h - mh * cs) / 2) | 0;
   for (let r = 0; r < mh; r++) {
-    for (let c = 0; c < mw; c++) {
-      if (!matrix[r][c]) continue;
-      const px = ox + c * cellSize, py = oy + r * cellSize;
-      context.fillRect(px + 1, py + 1, cellSize - 2, cellSize - 2);
-      context.fillStyle = 'rgba(255,255,255,0.25)';
-      context.fillRect(px + 1, py + 1, cellSize - 2, 3);
-      context.fillRect(px + 1, py + 1, 3, cellSize - 2);
-      context.fillStyle = 'rgba(0,0,0,0.3)';
-      context.fillRect(px + 1, py + cellSize - 4, cellSize - 2, 3);
-      context.fillRect(px + cellSize - 4, py + 1, 3, cellSize - 2);
-      context.fillStyle = COLORS[type];
+    for (let cc = 0; cc < mw; cc++) {
+      if (!mat[r][cc]) continue;
+      const px = ox + cc * cs, py = oy + r * cs;
+      c.fillStyle = PALETTE[type];
+      c.fillRect(px + 1, py + 1, cs - 2, cs - 2);
+      c.fillStyle = 'rgba(255,255,255,0.28)';
+      c.fillRect(px + 1, py + 1, cs - 2, 3);
+      c.fillRect(px + 1, py + 1, 3, cs - 2);
+      c.fillStyle = 'rgba(0,0,0,0.35)';
+      c.fillRect(px + 1, py + cs - 4, cs - 2, 3);
+      c.fillRect(px + cs - 4, py + 1, 3, cs - 2);
     }
   }
 }
 
-function drawNext() {
-  nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-  const slotH = nextCanvas.height / 3;
+function renderHold() {
+  drawMini(hldCtx, hldCvs.width, hldCvs.height, heldType);
+}
+
+function renderNext() {
+  nxtCtx.clearRect(0, 0, nxtCvs.width, nxtCvs.height);
+  const slotH = (nxtCvs.height / 3) | 0;
   for (let i = 0; i < 3; i++) {
-    const type = nextQueue[i];
-    const tmpCanvas = document.createElement('canvas');
-    tmpCanvas.width = nextCanvas.width;
-    tmpCanvas.height = slotH;
-    const tmpCtx = tmpCanvas.getContext('2d');
-    drawMiniPiece(tmpCtx, type, nextCanvas.width, slotH);
-    nextCtx.drawImage(tmpCanvas, 0, i * slotH);
+    const type = queue[i];
+    if (!type) continue;
+    const mat = MINOS[type];
+    const mw = mat[0].length, mh = mat.length;
+    const cs = Math.min(((nxtCvs.width - 16) / mw) | 0, ((slotH - 16) / mh) | 0);
+    const ox = ((nxtCvs.width - mw * cs) / 2) | 0;
+    const oyBase = i * slotH + ((slotH - mh * cs) / 2) | 0;
+    for (let r = 0; r < mh; r++) {
+      for (let c = 0; c < mw; c++) {
+        if (!mat[r][c]) continue;
+        const px = ox + c * cs;
+        const py = oyBase + r * cs;
+        nxtCtx.fillStyle = PALETTE[type];
+        nxtCtx.fillRect(px + 1, py + 1, cs - 2, cs - 2);
+        nxtCtx.fillStyle = 'rgba(255,255,255,0.28)';
+        nxtCtx.fillRect(px + 1, py + 1, cs - 2, 3);
+        nxtCtx.fillRect(px + 1, py + 1, 3, cs - 2);
+        nxtCtx.fillStyle = 'rgba(0,0,0,0.35)';
+        nxtCtx.fillRect(px + 1, py + cs - 4, cs - 2, 3);
+        nxtCtx.fillRect(px + cs - 4, py + 1, 3, cs - 2);
+      }
+    }
     if (i < 2) {
-      nextCtx.strokeStyle = 'rgba(255,255,255,0.06)';
-      nextCtx.lineWidth = 1;
-      nextCtx.beginPath();
-      nextCtx.moveTo(8, (i + 1) * slotH);
-      nextCtx.lineTo(nextCanvas.width - 8, (i + 1) * slotH);
-      nextCtx.stroke();
+      nxtCtx.strokeStyle = 'rgba(255,255,255,0.06)';
+      nxtCtx.lineWidth = 1;
+      nxtCtx.beginPath();
+      nxtCtx.moveTo(8, (i + 1) * slotH);
+      nxtCtx.lineTo(nxtCvs.width - 8, (i + 1) * slotH);
+      nxtCtx.stroke();
     }
   }
 }
 
-function drawHold() {
-  drawMiniPiece(holdCtx, holdPiece, holdCanvas.width, holdCanvas.height);
-}
-
-function render() {
-  drawBoard();
-  if (piece) {
-    drawGhost();
-    drawActivePiece();
-  }
-  drawNext();
-}
-
-// ── Game loop ───────────────────────────────────────────────────────────────────
-function gameLoop(ts) {
-  if (!gameRunning || paused) return;
-  const dt = ts - (lastTime || ts);
-  lastTime = ts;
-
-  dropTimer += dt;
-  const interval = DROP_INTERVAL[Math.min(level - 1, DROP_INTERVAL.length - 1)];
-  if (dropTimer >= interval) {
-    dropTimer = 0;
-    if (isValid(piece.matrix, piece.x, piece.y + 1)) {
-      piece.y++;
-    } else {
-      lockPiece();
+// ── Game loop ──────────────────────────────────────────────────────────────────
+function loop(ts) {
+  if (!running || paused) return;
+  const dt = ts - (lastTs ?? ts);
+  lastTs = ts;
+  dropAcc += dt;
+  const spd = SPEEDS[Math.min(level - 1, SPEEDS.length - 1)];
+  while (dropAcc >= spd) {
+    dropAcc -= spd;
+    if (cur) {
+      if (fits(cur.mat, cur.x, cur.y + 1)) cur.y++;
+      else lock();
     }
   }
-
-  render();
-  if (gameRunning && !paused) {
-    animationId = requestAnimationFrame(gameLoop);
-  }
+  renderBoard();
+  renderNext();
+  if (running && !paused) rafId = requestAnimationFrame(loop);
 }
 
-// ── UI helpers ──────────────────────────────────────────────────────────────────
-function updateUI() {
+// ── HUD ────────────────────────────────────────────────────────────────────────
+function updateHUD() {
   document.getElementById('score').textContent = score.toLocaleString();
   document.getElementById('level').textContent = level;
   document.getElementById('lines').textContent = lines;
@@ -362,139 +352,150 @@ function hideOverlay() {
   document.getElementById('overlay').style.display = 'none';
 }
 
-// ── Start / pause / gameover ────────────────────────────────────────────────────
-function initGame() {
-  board = createBoard();
-  bag = [];
-  refillBag();
-  nextQueue = [nextFromBag(), nextFromBag(), nextFromBag()];
-  holdPiece = null;
-  holdUsed = false;
-  score = 0;
-  level = 1;
-  lines = 0;
-  dropTimer = 0;
-  lastTime = null;
-  gameRunning = true;
-  paused = false;
-  gameOver = false;
-
-  updateUI();
-  drawHold();
-  drawNext();
+// ── Game control ───────────────────────────────────────────────────────────────
+function startGame() {
+  board = emptyBoard();
+  bag = []; refillBag();
+  queue = [nextType(), nextType(), nextType()];
+  heldType = null; holdLocked = false;
+  cur = null;
+  score = 0; level = 1; lines = 0;
+  dropAcc = 0; lastTs = null;
+  running = true; paused = false;
+  updateHUD();
+  renderHold();
   spawnPiece();
   hideOverlay();
-
-  cancelAnimationFrame(animationId);
-  animationId = requestAnimationFrame(gameLoop);
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
 }
 
 function togglePause() {
-  if (!gameRunning || gameOver) return;
+  if (!running) return;
   paused = !paused;
   if (paused) {
     showScreen('pauseScreen');
   } else {
     hideOverlay();
-    lastTime = null;
-    animationId = requestAnimationFrame(gameLoop);
+    lastTs = null;
+    rafId = requestAnimationFrame(loop);
   }
 }
 
-function triggerGameOver() {
-  gameRunning = false;
-  gameOver = true;
-  cancelAnimationFrame(animationId);
+function endGame() {
+  running = false;
+  cancelAnimationFrame(rafId);
   document.getElementById('finalScore').textContent = score.toLocaleString();
   showScreen('gameOverScreen');
 }
 
-// ── Keyboard ────────────────────────────────────────────────────────────────────
-let dasTimer = null, dasActive = false;
-const DAS_DELAY = 170, DAS_RATE = 50;
+// ── Keyboard ───────────────────────────────────────────────────────────────────
+let dasDir = null, dasTimeout = null, dasInterval = null;
+const DAS_DELAY = 160, DAS_RATE = 40;
 
-function startDAS(fn) {
+function startDAS(dir, fn) {
+  if (dasDir === dir) return;
+  stopDAS();
+  dasDir = dir;
   fn();
-  clearInterval(dasTimer);
-  dasActive = true;
-  dasTimer = setTimeout(() => {
-    if (!dasActive) return;
-    dasTimer = setInterval(() => { if (gameRunning && !paused) fn(); }, DAS_RATE);
+  dasTimeout = setTimeout(() => {
+    dasInterval = setInterval(() => {
+      if (running && !paused) fn();
+    }, DAS_RATE);
   }, DAS_DELAY);
 }
 
-function stopDAS() {
-  dasActive = false;
-  clearTimeout(dasTimer);
-  clearInterval(dasTimer);
-  dasTimer = null;
+function stopDAS(dir) {
+  if (dir && dasDir !== dir) return;
+  clearTimeout(dasTimeout);
+  clearInterval(dasInterval);
+  dasTimeout = dasInterval = null;
+  dasDir = null;
 }
 
 document.addEventListener('keydown', e => {
-  if (!gameRunning || paused) {
-    if (e.key === 'p' || e.key === 'P') togglePause();
+  if (!running || paused) {
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') togglePause();
     return;
   }
   switch (e.key) {
-    case 'ArrowLeft':  e.preventDefault(); startDAS(moveLeft);  break;
-    case 'ArrowRight': e.preventDefault(); startDAS(moveRight); break;
-    case 'ArrowDown':  e.preventDefault(); softDrop();           break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      startDAS('left', moveLeft);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      startDAS('right', moveRight);
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      softDrop();
+      break;
     case 'ArrowUp':
-    case 'x': case 'X': e.preventDefault(); tryRotate(rotateCW);  break;
-    case 'z': case 'Z': e.preventDefault(); tryRotate(rotateCCW); break;
-    case ' ':           e.preventDefault(); hardDrop();            break;
-    case 'c': case 'C': e.preventDefault(); hold();               break;
-    case 'p': case 'P': e.preventDefault(); togglePause();        break;
+    case 'x': case 'X':
+      e.preventDefault();
+      tryRotate(rotateCW);
+      break;
+    case 'z': case 'Z':
+      e.preventDefault();
+      tryRotate(rotateCCW);
+      break;
+    case ' ':
+      e.preventDefault();
+      hardDrop();
+      break;
+    case 'c': case 'C':
+      e.preventDefault();
+      doHold();
+      break;
+    case 'p': case 'P': case 'Escape':
+      e.preventDefault();
+      togglePause();
+      break;
   }
 });
 
 document.addEventListener('keyup', e => {
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') stopDAS();
+  if (e.key === 'ArrowLeft')  stopDAS('left');
+  if (e.key === 'ArrowRight') stopDAS('right');
 });
 
-// ── Touch / mobile buttons ───────────────────────────────────────────────────────
-function bindBtn(id, fn, repeat = false) {
+// ── Mobile controls ────────────────────────────────────────────────────────────
+function mbtn(id, fn, repeat) {
   const el = document.getElementById(id);
   if (!el) return;
-
-  let intervalId = null;
-  function trigger() { if (gameRunning && !paused) fn(); }
-
-  el.addEventListener('touchstart', e => {
+  let iv = null;
+  const go = () => { if (running && !paused) fn(); };
+  const onStart = e => {
     e.preventDefault();
-    trigger();
-    if (repeat) intervalId = setInterval(trigger, DAS_RATE);
-  }, { passive: false });
-
-  el.addEventListener('touchend', e => {
+    go();
+    if (repeat) iv = setInterval(go, DAS_RATE);
+  };
+  const onEnd = e => {
     e.preventDefault();
-    if (intervalId) { clearInterval(intervalId); intervalId = null; }
-  }, { passive: false });
-
-  el.addEventListener('mousedown', e => {
-    e.preventDefault();
-    trigger();
-    if (repeat) intervalId = setInterval(trigger, DAS_RATE);
-  });
-
-  el.addEventListener('mouseup', () => {
-    if (intervalId) { clearInterval(intervalId); intervalId = null; }
-  });
+    clearInterval(iv);
+    iv = null;
+  };
+  el.addEventListener('touchstart',  onStart, { passive: false });
+  el.addEventListener('touchend',    onEnd,   { passive: false });
+  el.addEventListener('touchcancel', onEnd,   { passive: false });
+  el.addEventListener('mousedown',   onStart);
+  el.addEventListener('mouseup',     onEnd);
+  el.addEventListener('mouseleave',  onEnd);
 }
 
-bindBtn('moveLeftBtn',    moveLeft,              true);
-bindBtn('moveRightBtn',   moveRight,             true);
-bindBtn('softDropBtn',    softDrop,              true);
-bindBtn('hardDropBtn',    hardDrop);
-bindBtn('rotateRightBtn', () => tryRotate(rotateCW));
-bindBtn('rotateLeftBtn',  () => tryRotate(rotateCCW));
-bindBtn('holdBtn',        hold);
+mbtn('moveLeftBtn',    moveLeft,                   true);
+mbtn('moveRightBtn',   moveRight,                  true);
+mbtn('softDropBtn',    softDrop,                   true);
+mbtn('hardDropBtn',    hardDrop);
+mbtn('rotateRightBtn', () => tryRotate(rotateCW));
+mbtn('rotateLeftBtn',  () => tryRotate(rotateCCW));
+mbtn('holdBtn',        doHold);
 
-// ── Button wiring ───────────────────────────────────────────────────────────────
-document.getElementById('startBtn').addEventListener('click', initGame);
+// ── Button wiring ──────────────────────────────────────────────────────────────
+document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('resumeBtn').addEventListener('click', togglePause);
-document.getElementById('restartBtn').addEventListener('click', initGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
 
-// ── Initial render ──────────────────────────────────────────────────────────────
+// ── Initial screen ─────────────────────────────────────────────────────────────
 showScreen('startScreen');
-ctx.clearRect(0, 0, canvas.width, canvas.height);
