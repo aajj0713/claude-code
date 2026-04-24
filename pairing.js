@@ -1,3 +1,12 @@
+const drinkColors = {
+  beer:        { color: '#f59e0b', rgb: '245,158,11' },
+  whiskey:     { color: '#d97706', rgb: '217,119,6' },
+  shochu:      { color: '#10b981', rgb: '16,185,129' },
+  'red-wine':  { color: '#f87171', rgb: '248,113,113' },
+  'white-wine':{ color: '#f472b6', rgb: '244,114,182' },
+  sake:        { color: '#a78bfa', rgb: '167,139,250' },
+};
+
 const pairings = {
   beer: {
     name: 'ビール',
@@ -89,6 +98,11 @@ function selectDrink(drinkKey) {
   });
 
   const data = pairings[drinkKey];
+  const { color, rgb } = drinkColors[drinkKey];
+  const root = document.documentElement;
+  root.style.setProperty('--drink-color', color);
+  root.style.setProperty('--drink-rgb', rgb);
+
   document.getElementById('result-icon').textContent = data.icon;
   document.getElementById('result-drink-name').textContent = data.name;
   document.getElementById('result-description').textContent = data.description;

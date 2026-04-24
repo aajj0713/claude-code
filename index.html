@@ -4,16 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>お酒 × 料理 ペアリング</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
   <div class="app">
     <header class="header">
-      <h1 class="title">🍷 お酒 × 料理</h1>
+      <p class="header-eyebrow">Food &amp; Drink</p>
+      <h1 class="title">お酒<span class="title-x"> × </span>料理</h1>
       <p class="subtitle">お酒を選ぶと、合う料理をご提案します</p>
+      <div class="header-rule"></div>
     </header>
 
     <section class="drink-section">
+      <p class="section-label"><span>Select your drink</span></p>
       <div class="drink-grid">
         <button class="drink-card" data-drink="beer" onclick="selectDrink('beer')">
           <span class="drink-icon">🍺</span>
@@ -46,13 +55,14 @@
       <div class="result-card" id="result-card">
         <div class="result-header">
           <span class="result-drink-icon" id="result-icon"></span>
-          <div>
-            <p class="result-label">選択中のお酒</p>
+          <div class="result-meta">
+            <p class="result-label">Pairing Guide</p>
             <h2 class="result-drink-name" id="result-drink-name"></h2>
           </div>
         </div>
+        <div class="result-divider"></div>
         <p class="result-description" id="result-description"></p>
-        <h3 class="food-title">おすすめの料理</h3>
+        <h3 class="food-title"><span>Recommended dishes</span></h3>
         <div class="food-grid" id="food-grid"></div>
       </div>
     </section>

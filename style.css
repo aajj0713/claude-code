@@ -4,186 +4,313 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg: #07070b;
+  --surface: rgba(255, 255, 255, 0.028);
+  --border: rgba(255, 255, 255, 0.07);
+  --text: #f0ece4;
+  --muted: rgba(240, 236, 228, 0.38);
+  --gold: #c9a46a;
+  --drink-color: #c9a46a;
+  --drink-rgb: 201, 164, 106;
+}
+
 body {
   min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
-  background: linear-gradient(160deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
-  color: #ffffff;
-  padding: 24px 16px 48px;
+  padding: 0 20px 80px;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 背景オーブ */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(120px);
+  z-index: 0;
+}
+.orb-1 {
+  width: 640px;
+  height: 640px;
+  background: radial-gradient(circle, rgba(76, 29, 149, 0.18), transparent 70%);
+  top: -200px;
+  right: -180px;
+}
+.orb-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(127, 29, 29, 0.14), transparent 70%);
+  bottom: -100px;
+  left: -150px;
 }
 
 .app {
-  max-width: 700px;
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
   margin: 0 auto;
 }
 
 /* ヘッダー */
 .header {
   text-align: center;
-  padding: 32px 0 28px;
+  padding: 64px 0 44px;
+}
+
+.header-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+  font-weight: 400;
 }
 
 .title {
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  margin-bottom: 8px;
-  background: linear-gradient(135deg, #f6d365, #fda085);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: 'Cormorant Garamond', 'Georgia', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  font-size: 52px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.title-x {
+  color: var(--gold);
+  font-style: italic;
+  font-weight: 300;
 }
 
 .subtitle {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.55);
-  letter-spacing: 0.05em;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
 }
 
-/* お酒選択グリッド */
+.header-rule {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  margin: 24px auto 0;
+  opacity: 0.5;
+}
+
+/* セクションラベル */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+.section-label::before,
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-label span {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 16px;
+  white-space: nowrap;
+}
+
+/* お酒カード */
 .drink-section {
-  margin-bottom: 28px;
+  margin-bottom: 44px;
 }
 
 .drink-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 12px;
 }
 
+.drink-card[data-drink="beer"]       { --card-color: #f59e0b; --card-rgb: 245,158,11; }
+.drink-card[data-drink="whiskey"]    { --card-color: #d97706; --card-rgb: 217,119,6; }
+.drink-card[data-drink="shochu"]     { --card-color: #10b981; --card-rgb: 16,185,129; }
+.drink-card[data-drink="red-wine"]   { --card-color: #f87171; --card-rgb: 248,113,113; }
+.drink-card[data-drink="white-wine"] { --card-color: #f472b6; --card-rgb: 244,114,182; }
+.drink-card[data-drink="sake"]       { --card-color: #a78bfa; --card-rgb: 167,139,250; }
+
 .drink-card {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  padding: 22px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--card-color);
+  border-radius: 14px;
+  padding: 26px 12px 22px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-  color: #ffffff;
+  color: var(--text);
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease;
+  position: relative;
+}
+
+.drink-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(var(--card-rgb), 0);
+  transition: box-shadow 0.25s ease;
+  pointer-events: none;
+}
+
+.drink-card:hover {
+  background: rgba(var(--card-rgb), 0.07);
+  border-color: rgba(var(--card-rgb), 0.35);
+  border-top-color: var(--card-color);
+  transform: translateY(-4px);
+}
+.drink-card:hover::after {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(var(--card-rgb), 0.12);
+}
+
+.drink-card.active {
+  background: rgba(var(--card-rgb), 0.1);
+  border-color: rgba(var(--card-rgb), 0.45);
+  border-top-color: var(--card-color);
+  transform: translateY(-2px);
+}
+.drink-card.active::after {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(var(--card-rgb), 0.3) inset;
+}
+
+.drink-icon {
+  font-size: 38px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.drink-card:hover .drink-icon,
+.drink-card.active .drink-icon {
+  transform: scale(1.12);
+}
+
+.drink-name {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: rgba(240, 236, 228, 0.8);
+}
+
+/* 結果セクション */
+.result-section {
+  display: none;
+}
+.result-section.visible {
+  display: block;
+  animation: fadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--drink-color);
+  border-radius: 16px;
+  padding: 36px;
   position: relative;
   overflow: hidden;
 }
 
-.drink-card::before {
+.result-card::before {
   content: '';
   position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  border-radius: inherit;
-}
-
-.drink-card[data-drink="beer"]::before       { background: linear-gradient(135deg, rgba(251,191,36,0.25), rgba(245,158,11,0.15)); }
-.drink-card[data-drink="whiskey"]::before    { background: linear-gradient(135deg, rgba(180,83,9,0.3), rgba(120,53,15,0.2)); }
-.drink-card[data-drink="shochu"]::before     { background: linear-gradient(135deg, rgba(16,185,129,0.25), rgba(5,150,105,0.15)); }
-.drink-card[data-drink="red-wine"]::before   { background: linear-gradient(135deg, rgba(220,38,38,0.3), rgba(153,27,27,0.2)); }
-.drink-card[data-drink="white-wine"]::before { background: linear-gradient(135deg, rgba(251,207,232,0.25), rgba(244,114,182,0.15)); }
-.drink-card[data-drink="sake"]::before       { background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(109,40,217,0.15)); }
-
-.drink-card:hover {
-  transform: translateY(-4px) scale(1.03);
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
-}
-
-.drink-card:hover::before,
-.drink-card.active::before {
-  opacity: 1;
-}
-
-.drink-card.active {
-  border-color: rgba(255, 255, 255, 0.45);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
-  transform: translateY(-2px);
-}
-
-.drink-icon {
-  font-size: 40px;
-  line-height: 1;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
-}
-
-.drink-name {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-}
-
-/* 結果エリア */
-.result-section {
-  display: none;
-}
-
-.result-section.visible {
-  display: block;
-  animation: slideUp 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.result-card {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1.5px solid rgba(255, 255, 255, 0.15);
-  border-radius: 24px;
-  padding: 28px;
-  backdrop-filter: blur(20px);
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 160px;
+  background: radial-gradient(ellipse 60% 100% at 10% -20%, rgba(var(--drink-rgb), 0.06), transparent);
+  pointer-events: none;
 }
 
 .result-header {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  gap: 22px;
+  margin-bottom: 24px;
 }
 
 .result-drink-icon {
-  font-size: 52px;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+  font-size: 68px;
+  line-height: 1;
   flex-shrink: 0;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.5));
+}
+
+.result-meta {
+  flex: 1;
+  padding-top: 6px;
 }
 
 .result-label {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
-  letter-spacing: 0.1em;
+  font-size: 9px;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  color: var(--muted);
+  margin-bottom: 8px;
 }
 
 .result-drink-name {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-family: 'Cormorant Garamond', 'Georgia', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+  font-size: 34px;
+  font-weight: 400;
+  color: var(--drink-color);
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.result-divider {
+  height: 1px;
+  background: linear-gradient(to right, rgba(var(--drink-rgb), 0.3), var(--border), transparent);
+  margin-bottom: 22px;
 }
 
 .result-description {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.65);
-  line-height: 1.7;
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 13.5px;
+  color: rgba(240, 236, 228, 0.58);
+  line-height: 1.85;
+  margin-bottom: 30px;
 }
 
 .food-title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.5);
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0;
   margin-bottom: 16px;
+  overflow: hidden;
+}
+.food-title span {
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-right: 16px;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.food-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
 .food-grid {
@@ -193,53 +320,59 @@ body {
 }
 
 .food-item {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 14px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  animation: fadeIn 0.3s ease both;
+  gap: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-left: 2px solid rgba(var(--drink-rgb), 0.55);
+  border-radius: 10px;
+  animation: slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: background 0.18s ease, border-color 0.18s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
+.food-item:hover {
+  background: rgba(var(--drink-rgb), 0.05);
+  border-left-color: var(--drink-color);
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .food-emoji {
   font-size: 26px;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .food-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .food-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .food-note {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
-  line-height: 1.4;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
-@media (max-width: 480px) {
-  .drink-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .food-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .title {
-    font-size: 26px;
-  }
+/* レスポンシブ */
+@media (max-width: 520px) {
+  .title { font-size: 38px; }
+  .drink-grid { grid-template-columns: repeat(2, 1fr); }
+  .food-grid { grid-template-columns: 1fr; }
+  .result-card { padding: 24px 20px; }
+  .result-drink-icon { font-size: 52px; }
+  .result-drink-name { font-size: 26px; }
+  .header { padding: 48px 0 36px; }
 }
