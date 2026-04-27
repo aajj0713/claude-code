@@ -3,41 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>電卓</title>
+  <title>小説おすすめエンジン</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="calculator">
-    <div class="display">
-      <div id="expression"></div>
-      <div id="result">0</div>
+  <header>
+    <div class="header-inner">
+      <h1>📚 小説おすすめエンジン</h1>
+      <p class="subtitle">好きな小説や読みたい雰囲気を入力すると、おすすめの作品を紹介します</p>
     </div>
-    <div class="buttons">
-      <button class="btn btn-clear" onclick="clearAll()">AC</button>
-      <button class="btn btn-op" onclick="toggleSign()">+/-</button>
-      <button class="btn btn-op" onclick="percent()">%</button>
-      <button class="btn btn-operator" onclick="inputOperator('/')">÷</button>
+  </header>
 
-      <button class="btn" onclick="inputDigit('7')">7</button>
-      <button class="btn" onclick="inputDigit('8')">8</button>
-      <button class="btn" onclick="inputDigit('9')">9</button>
-      <button class="btn btn-operator" onclick="inputOperator('*')">×</button>
+  <main>
+    <section class="search-section">
+      <div class="search-box">
+        <label for="description">どんな小説を読みたいですか？</label>
+        <textarea
+          id="description"
+          placeholder="例：「ミステリーが好きで、謎解きよりも人間関係の複雑さを楽しみたい」「異世界ファンタジーで主人公が成長する話」「泣ける恋愛小説を探している」など、自由に書いてください"
+          rows="4"
+        ></textarea>
+        <div class="search-actions">
+          <button id="search-btn" onclick="recommend()">おすすめを探す</button>
+          <button id="clear-btn" onclick="clearSearch()">クリア</button>
+        </div>
+      </div>
 
-      <button class="btn" onclick="inputDigit('4')">4</button>
-      <button class="btn" onclick="inputDigit('5')">5</button>
-      <button class="btn" onclick="inputDigit('6')">6</button>
-      <button class="btn btn-operator" onclick="inputOperator('-')">−</button>
+      <div class="tag-shortcuts">
+        <span class="tag-label">クイック選択：</span>
+        <button class="tag-btn" onclick="setTag('ミステリー 謎解き 推理')">ミステリー</button>
+        <button class="tag-btn" onclick="setTag('恋愛 感動 ロマンス')">恋愛・ロマンス</button>
+        <button class="tag-btn" onclick="setTag('ファンタジー 冒険 魔法')">ファンタジー</button>
+        <button class="tag-btn" onclick="setTag('SF 未来 宇宙 科学')">SF</button>
+        <button class="tag-btn" onclick="setTag('ホラー 怖い 恐怖 心理')">ホラー</button>
+        <button class="tag-btn" onclick="setTag('歴史 時代小説 武士 戦国')">歴史・時代</button>
+        <button class="tag-btn" onclick="setTag('青春 学校 友情 成長')">青春・成長</button>
+        <button class="tag-btn" onclick="setTag('感動 泣ける 家族 絆')">感動・家族</button>
+      </div>
+    </section>
 
-      <button class="btn" onclick="inputDigit('1')">1</button>
-      <button class="btn" onclick="inputDigit('2')">2</button>
-      <button class="btn" onclick="inputDigit('3')">3</button>
-      <button class="btn btn-operator" onclick="inputOperator('+')">+</button>
+    <section id="results-section" class="results-section hidden">
+      <div class="results-header">
+        <h2>おすすめの小説 <span id="results-count"></span></h2>
+        <p id="results-summary" class="results-summary"></p>
+      </div>
+      <div id="results-grid" class="results-grid"></div>
+    </section>
 
-      <button class="btn btn-zero" onclick="inputDigit('0')">0</button>
-      <button class="btn" onclick="inputDecimal()">.</button>
-      <button class="btn btn-equals" onclick="calculate()">=</button>
-    </div>
-  </div>
-  <script src="calculator.js"></script>
+    <section id="empty-state" class="empty-state hidden">
+      <div class="empty-icon">🔍</div>
+      <p>条件に合う小説が見つかりませんでした。別のキーワードで試してみてください。</p>
+    </section>
+
+    <section class="featured-section">
+      <h2>人気のジャンル</h2>
+      <div class="genre-grid">
+        <div class="genre-card" onclick="setTag('ミステリー 謎解き 推理 殺人'); recommend()">
+          <span class="genre-icon">🔍</span>
+          <span>ミステリー</span>
+        </div>
+        <div class="genre-card" onclick="setTag('恋愛 感動 ロマンス 切ない'); recommend()">
+          <span class="genre-icon">💕</span>
+          <span>恋愛</span>
+        </div>
+        <div class="genre-card" onclick="setTag('ファンタジー 冒険 魔法 異世界'); recommend()">
+          <span class="genre-icon">⚔️</span>
+          <span>ファンタジー</span>
+        </div>
+        <div class="genre-card" onclick="setTag('SF 未来 宇宙 科学技術'); recommend()">
+          <span class="genre-icon">🚀</span>
+          <span>SF</span>
+        </div>
+        <div class="genre-card" onclick="setTag('ホラー 怖い 恐怖 心理サスペンス'); recommend()">
+          <span class="genre-icon">👻</span>
+          <span>ホラー</span>
+        </div>
+        <div class="genre-card" onclick="setTag('歴史 時代小説 江戸 明治 戦国'); recommend()">
+          <span class="genre-icon">⛩️</span>
+          <span>歴史・時代</span>
+        </div>
+        <div class="genre-card" onclick="setTag('青春 学校 友情 部活 成長'); recommend()">
+          <span class="genre-icon">🌸</span>
+          <span>青春</span>
+        </div>
+        <div class="genre-card" onclick="setTag('感動 泣ける 家族 絆 生きる'); recommend()">
+          <span class="genre-icon">😢</span>
+          <span>感動・泣ける</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 小説おすすめエンジン — 読書の新しい出会いを</p>
+  </footer>
+
+  <script src="app.js"></script>
 </body>
 </html>
